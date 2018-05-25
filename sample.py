@@ -236,64 +236,7 @@ def upload_file(*, client, filename, folder='Attachments'):
                       data=file_content,
                       content_type=content_type)
 
-##############################################################################################
-
-@APP.route('/downloadz/')
-def return_files():
-    #this is to get something from onedrive
-    photo,filename = download_photos(client=MSGRAPH, user_id='me', save_as='name')
-    # save photo data as config.photo for use in mailform.html/mailsent.html
-    # if profile_pic:
-    # else:
-    #     profile_pic = 'static/images/no-profile-photo.png'
-    #     with open(profile_pic, 'rb') as fhandle:
-    #         config.photo = base64.b64encode(fhandle.read()).decode()
-
-    return return_files_tuts(filename)
-
-def return_files_tuts(fname):
-    try:
-        return send_file(fname,attachment_filename='test.txt')
-    except Exception as e:
-        return str(e)
-
-def download_photos(*, client=MSGRAPH, user_id='me', save_as="test"):
-    """Get profile photo.
-
-    client  = user-authenticated flask-oauthlib client instance
-    user_id = Graph id value for the user, or 'me' (default) for current user
-    save_as = optional filename to save the photo locally. Should not include an
-              extension - the extension is determined by photo's content type.
-
-    Returns a tuple of the photo (raw data), content type, saved filename.
-    """
-    endpoint = 'me/drive/root:/Attachments/test.txt:/content' if user_id == 'me' else f'users/{user_id}/$value'
-    photo_response = client.get(endpoint)
-    # if str(photo_response.status).startswith('2'):
-    #     # HTTP status code is 2XX, so photo was returned successfully
-    photo = photo_response.raw_data
-    # metadata_response = client.get(endpoint[:-7]) # remove /$value to get metadata
-    # content_type = metadata_response.data.get('@odata.mediaContentType', '')
-    # else:
-    #     photo = ''
-    #     content_type = ''
-
-    # if photo and save_as:
-    #     extension = content_type.split('/')[1]
-    #     if extension == 'pjpeg':
-    #         extension = 'jpg' # to correct known issue with content type
-    filename = save_as + '.' + 'txt'
-    print(filename)
-    print("raw data", photo)
-    with open(filename, 'wb') as fhandle:
-            fhandle.write(photo)
-    # else:
-    #     filename = ''
-
-    return (photo,filename)
-#####################################################################
-
-if __name__ == '__main__':
-    APP.run()
+if __name__ == "__main__":
+    APP.run(host='0.0.0.0')
 
 
