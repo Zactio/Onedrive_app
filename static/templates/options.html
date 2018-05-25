@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!-- Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license.
+See LICENSE in the source repository root for complete license information. -->
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Send Mail</title>
+        <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css" />
+        <link rel="stylesheet" type="text/css" href="/static/css/site.css?version=1.22" />
+    </head>
+    <body>
+        <div class="container homepage-container">
+            <h1>For OneDrive</h1>
+            <p>This does exactly what I want:</p>
+            <table class="graph-apis">
+                <tr>
+                    <th>Graph Endpoint</th>
+                    <th>Instructions</th>
+                </tr>
+                <tr>
+                    <td class="endpoint">/upload/(string:upload)</td>
+                    <td><target="_blank"><p>To upload a picture, add your file's destination in your computer behind the /upload/. "|" the downward slash must be used to specify a "/" in a path.</p>
+                </tr>
+                <tr>
+                    <td class="endpoint">/search/(search query)</td>
+                    <td><target=" target="_blank"><p>To search a file, add the file query behind the /search/</p>
+                </tr>
+                <tr>
+                    <td class="endpoint">Press this button to first find the file you want to download.</td>
+                    <td><p><button type="button" class="btn btn-success btn-lg" onclick="window.location.href='/download/'">Connect</button></p>
+                </tr>
+            </table>
+        </div>
+    </body>
+</html>
