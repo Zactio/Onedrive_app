@@ -144,13 +144,15 @@ def downloadz(searched_name):
             path_list.append(x["webUrl"][(x["webUrl"].index("Documents"))+10:])
             # print (x["webUrl"][(x["webUrl"].index("Documents"))+10:])
 
+    if path_list == []:
+        return "<h1>Error 404</h1><p>File not found in Onedrive.</p>"
 
     if request.method == 'POST':
         pathsz = request.form['html_path']
-        namesz = request.form['html_name']
-        local = request.form['html_local']
+        # namesz = request.form['html_name']
+        # local = request.form['html_local']
 
-        photo,filename = profile_photo(pathsz=pathsz,client=MSGRAPH, user_id='me', save_as= ((local+"\\"+namesz).replace("/","\\").replace("\\\\", "\\")))
+        photo,filename = profile_photo(pathsz=pathsz,client=MSGRAPH, user_id='me', save_as= namesz)
         return return_files_tut(filename,namesz)
     return render_template('download_page.html', path = path_list, name = searched_name)
 
@@ -165,8 +167,7 @@ def profile_photo(*, pathsz, client=MSGRAPH, user_id='me', save_as=None):
     filename = save_as + '.' + 'txt'
     print(filename)
     print("raw data", photo)
-    with open(filename, 'wb') as fhandle:
-            fhandle.write(photo)
+    with open(filename, 'wb') as fhandle:fhandle.write(photo)
     return (photo,filename)
 
 @MSGRAPH.tokengetter
@@ -188,9 +189,6 @@ def return_files_tut(path, name):
         return send_file(path.replace("/","\\"),attachment_filename=name)
     except Exception as e:
         return str(e)
-
-
-
 
 def sharing_link(*, client, item_id, link_type='view'):
     endpoint = f'me/drive/items/{item_id}/createLink'
