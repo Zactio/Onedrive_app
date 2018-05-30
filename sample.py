@@ -1,10 +1,6 @@
 #Python Onedrive application
-<<<<<<< HEAD
-#Done by: Zachary and Brandon
-=======
 #Done by: Zachary and Brandnon
 
->>>>>>> 498442ca66270fc39021386a279420e285dfed46
 import base64
 import mimetypes
 import os
@@ -153,27 +149,17 @@ def downloadz(searched_name):
 
     if request.method == 'POST':
         pathsz = request.form['html_path']
-        namesz = request.form['html_name']
-<<<<<<< HEAD
-        #local = request.form['html_local']
+        # namesz = request.form['html_name']
+        # local = request.form['html_local']
 
-        photo,filename = profile_photo(pathsz=pathsz,client=MSGRAPH, user_id='me', save_as = namesz)
-=======
-        local = request.form['html_local']
-
-        photo,filename = profile_photo(pathsz=pathsz,client=MSGRAPH, user_id='me', save_as= ((local+"\\"+namesz).replace("/","\\").replace("\\\\", "\\")))
->>>>>>> 498442ca66270fc39021386a279420e285dfed46
+        photo,filename = profile_photo(pathsz=pathsz,client=MSGRAPH, user_id='me', save_as= namesz)
         return return_files_tut(filename,namesz)
     return render_template('download_page.html', path = path_list, name = searched_name)
 
     # return flask.redirect('/download/')
 
 
-<<<<<<< HEAD
-def profile_photo(*, client=MSGRAPH, user_id='me', save_as=None, pathsz):
-=======
 def profile_photo(*, pathsz, client=MSGRAPH, user_id='me', save_as=None):
->>>>>>> 498442ca66270fc39021386a279420e285dfed46
 
     endpoint = 'me/drive/root:/'+pathsz+':/content' if user_id == 'me' else f'users/{user_id}/$value'
     photo_response = client.get(endpoint)
@@ -181,8 +167,7 @@ def profile_photo(*, pathsz, client=MSGRAPH, user_id='me', save_as=None):
     filename = save_as + '.' + 'txt'
     print(filename)
     print("raw data", photo)
-    with open(filename, 'wb') as fhandle:
-            fhandle.write(photo)
+    with open(filename, 'wb') as fhandle:fhandle.write(photo)
     return (photo,filename)
 
 @MSGRAPH.tokengetter
@@ -205,9 +190,6 @@ def return_files_tut(path, name):
     except Exception as e:
         return str(e)
 
-
-
-
 def sharing_link(*, client, item_id, link_type='view'):
     endpoint = f'me/drive/items/{item_id}/createLink'
     response = client.post(endpoint,
@@ -221,16 +203,13 @@ def sharing_link(*, client, item_id, link_type='view'):
 
 def upload_file(*, client, filename, folder=None):
     """Upload a file to OneDrive for Business.
-
     client  = user-authenticated flask-oauthlib client instance
     filename = local filename; may include a path
     folder = destination subfolder/path in OneDrive for Business
              None (default) = root folder
-
     File is uploaded and the response object is returned.
     If file already exists, it is overwritten.
     If folder does not exist, it is created.
-
     API documentation:
     https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/api/driveitem_put_content
     """
@@ -253,22 +232,11 @@ def upload_file(*, client, filename, folder=None):
                       data=file_content,
                       content_type=content_type)
 
-<<<<<<< HEAD
-=======
 ssl_dir: str = os.path.dirname(__file__).replace('src', 'ssl')
 key_path: str = os.path.join(ssl_dir, 'server.key')
 crt_path: str = os.path.join(ssl_dir, 'server.crt')
 ssl_context: tuple = (crt_path, key_path)
->>>>>>> 498442ca66270fc39021386a279420e285dfed46
 
-ssl_dir: str = os.path.dirname(__file__).replace('src', 'ssl')
-key_path: str = os.path.join(ssl_dir, 'ssl/server.key')
-crt_path: str = os.path.join(ssl_dir, 'ssl/server.crt')
-ssl_context: tuple = (crt_path, key_path)
-
-if __name__ == "__main__":
-	APP.run('0.0.0.0', 8000, debug=True, ssl_context=ssl_context)
 
 if __name__ == "__main__":
     APP.run('0.0.0.0', 8000, debug=False, ssl_context=ssl_context)
-
