@@ -1,6 +1,5 @@
-'''Python Onedrive application
-Done by: Zachary and Brandnon
-'''
+#Python Onedrive application
+#Done by: Zachary and Brandon
 import base64
 import mimetypes
 import os
@@ -144,19 +143,22 @@ def downloadz(searched_name):
             path_list.append(x["webUrl"][(x["webUrl"].index("Documents"))+10:])
             # print (x["webUrl"][(x["webUrl"].index("Documents"))+10:])
 
+    if path_list == []:
+        return "<h1>Error 404</h1><p>File not found in Onedrive.</p>"
 
     if request.method == 'POST':
         pathsz = request.form['html_path']
         namesz = request.form['html_name']
+        #local = request.form['html_local']
 
-        photo,filename = profile_photo(client=MSGRAPH, user_id='me', save_as=namesz, pathsz=pathsz)
+        photo,filename = profile_photo(pathsz=pathsz,client=MSGRAPH, user_id='me', save_as = namesz)
         return return_files_tut(filename,namesz)
     return render_template('download_page.html', path = path_list, name = searched_name)
 
     # return flask.redirect('/download/')
 
 
-def profile_photo(*, client=MSGRAPH, user_id='me', save_as='test', pathsz):
+def profile_photo(*, client=MSGRAPH, user_id='me', save_as=None, pathsz):
 
     endpoint = 'me/drive/root:/'+pathsz+':/content' if user_id == 'me' else f'users/{user_id}/$value'
     photo_response = client.get(endpoint)
@@ -202,7 +204,7 @@ def sharing_link(*, client, item_id, link_type='view'):
         # status 201 = link created, status 200 = existing link returned
         return response.data['link']['webUrl']
 
-def upload_file(*, client, filename, folder='Attachments'):
+def upload_file(*, client, filename, folder=None):
     """Upload a file to OneDrive for Business.
 
     client  = user-authenticated flask-oauthlib client instance
@@ -236,7 +238,12 @@ def upload_file(*, client, filename, folder='Attachments'):
                       data=file_content,
                       content_type=content_type)
 
-if __name__ == "__main__":
-    APP.run(host='0.0.0.0')
 
+ssl_dir: str = os.path.dirname(__file__).replace('src', 'ssl')
+key_path: str = os.path.join(ssl_dir, 'ssl/server.key')
+crt_path: str = os.path.join(ssl_dir, 'ssl/server.crt')
+ssl_context: tuple = (crt_path, key_path)
+
+if __name__ == "__main__":
+	APP.run('0.0.0.0', 8000, debug=True, ssl_context=ssl_context)
 
