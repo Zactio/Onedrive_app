@@ -7,15 +7,17 @@ import os
 import pprint
 import uuid
 import flask
+import re
 from flask_oauthlib.client import OAuth
-from flask import request, jsonify,send_file,render_template,Flask, flash, request, redirect, url_for, send_from_directory
+from flask import request, jsonify,send_file,render_template,Flask, flash, request, redirect, url_for, send_from_directory, after_this_request
 from flask_uploads import UploadSet, configure_uploads, ALL
 from jinja2 import Template
 from werkzeug.utils import secure_filename
 import config
 
+
 UPLOAD_FOLDER = 'static/templates/'
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'pdf', 'docx'])
 
 APP = flask.Flask(__name__, template_folder='static/templates')
 APP.debug = True
@@ -37,18 +39,15 @@ APP.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @APP.route('/')
 def homepage():
-    """Render the home page."""
     return flask.render_template('homepage.html')
 
 @APP.route('/login')
 def login():
-    """Prompt user to authenticate."""
     flask.session['state'] = str(uuid.uuid4())
     return MSGRAPH.authorize(callback=config.REDIRECT_URI, state=flask.session['state'])
 
 @APP.route('/login/authorized')
 def authorized():
-    """Handler for the application's Redirect Uri."""
     if str(flask.session['state']) != str(flask.request.args['state']):
         raise Exception('state returned to redirect URL does not match!')
     response = MSGRAPH.authorized_response()
@@ -59,63 +58,264 @@ def authorized():
 
 @APP.route('/options/')
 def options():
-    """this is to render the options page"""
     return flask.render_template('options.html')
 
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@APP.route('/upload', methods=['GET', 'POST'])
-def upload():
+
+@APP.route('/search', methods=['GET', 'POST'] )
+def upload_search():
+    if request.methods == 'POST':
+        search_name = request.form['html_search']
+        search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=weburl" % search_name, headers=request_headers()).data
+        path_list = []
+        for x in search_path["value"]:
+            if x["name"]:
+                path_list.append(x["webUrl"][(x["webUrl"].index("Documents")):])
+                print (x["webUrl"][(x["webUrl"].index("Documents")):])
+        return jsonify(path_list)
+
+    return render_template("upload_search.html")
+
+
+#########################################################################################################################
+
+def isForm(string):
+    if string[0:1] == "f" or string[0:1] == "F":
+        return True
+    else:
+        return False
+
+def isRecord(string):
+    if string[0:1] == "r" or string[0:1] == "R":
+        return True
+    else:
+        return False
+
+def getPartsOfFile(string):
+    match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',string)
+    if match:
+        return (match.group(1), match.group(2), match.group(3), match.group(4) , match.group(5))
+    else:
+        return ("None", "None", "None", "None", "None")
+
+
+class ISODocumentFactory():
+    @staticmethod
+    def createDocument(input_string):
+        if isRecord(input_string) == True:
+            # return ISORecord(*getPartsOfFile(input_string))
+            return ISODocument(getPartsOfFile(input_string)[0],getPartsOfFile(input_string)[1],getPartsOfFile(input_string)[2],getPartsOfFile(input_string)[3],getPartsOfFile(input_string)[4])
+            
+        elif isForm(input_string) == True: 
+            # return getPartsOfFile(input_string)
+            return ISODocument(getPartsOfFile(input_string)[0],getPartsOfFile(input_string)[1],getPartsOfFile(input_string)[2],getPartsOfFile(input_string)[3],getPartsOfFile(input_string)[4])
+        else:
+            raise ValueError('Document is not a record or string.')
+
+    @staticmethod
+    def CreateDocParts(input_string):
+        if isRecord(input_string) == True:
+            return (getPartsOfFile(input_string))
+        elif isForm(input_string) == True: 
+            return (getPartsOfFile(input_string))
+        else:
+            pass
+
+    @staticmethod
+    def NoExisting(input_string):
+        if isRecord(input_string) == True or isForm(input_string) == True:
+            return
+        else:
+            return RaiseError()
+        
+class ISODocument():
+    # [FormNumericId][FormStringId][FormVersion][StringDescription][Extension]
+    def __init__(self, numericId, stringId, version, description, extension):
+        self.numericId = numericId
+        self.stringId = stringId
+        self.version = version
+        self.description = description
+        self.extension = extension
+
+    def file_name(self):
+        return self.numericId+self.stringId+str(int(self.version)+1)+self.description+ '.' + self.extension
+
+        # raise ValueError('A very specific bad thing happened.')
+
+    # def isForm(self):
+    #     if self.numericId[:1] == "f" or self.numericId[:1] == "F":
+    #         return True
+    #     else:
+    #         return False
+
+    # def isRecord(self):
+    #     if self.numericId[:1] == "r" or self.numericId[:1] == "R":
+    #         return True
+    #     else:
+    #         return False
+
+    def sameFile(self, fn):
+        if ((getPartsOfFile(self)[0][0:1] == 'F' or getPartsOfFile(self)[0][0:1] == 'R') and (getPartsOfFile(self)[4] == "docx" or getPartsOfFile(self)[4] == "txt")):
+            if getPartsOfFile(self)[0] == getPartsOfFile(fn)[0] and self[self.rfind("."):] == fn[fn.rfind("."):]:
+                return True
+            else:
+                return False
+        else:
+            RaiseError()
+
+    # def makeNextFormString(self):
+    #     return self.filename#self would be the latest document 
+
+    # def makeNextRecordString(self):
+    #     return self.filename
+
+# class ISOForm(ISODocument):
+#     def makeNextDoumentString(self):
+#         #"F"+ self.numericId + self.stringId + str(int(Latestversion)+1) + self.description + '.' + self.extension
+#         pass
+#         #implement this
+#         #returns the filename of the next version
+
+# class ISORecord(ISODocument):
+#     def makeNextDocumentString(self):
+#         pass
+#         #implement this
+def RaiseError():
+    return "<h1>Error</h1><p>Selected file is not a record or form.</p>"
+    # pass#raise error for when error needs to be raised; replaces all the hardcoded return errors
+
+############<class = "??">
+
+################################################UPLOAD FUNCTIONS FOR NEW UPLOAD
+def upload_secure_files(file):
     if request.method == 'POST':
-        # check if the post request has the file part
         if 'file' not in request.files:
             flash('No file part')
             return redirect(request.url)
         file = request.files['file']
-        # if user does not select file, browser also
-        # submit an empty part without filename
         if file.filename == '':
             flash('No selected file')
             return redirect(request.url)
+        fn = file.filename
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(APP.config['UPLOAD_FOLDER'], filename))
-                # """Sample form for sending email via Microsoft Graph."""
+            return True
 
-            # # read user profile data
-            user_profile = MSGRAPH.get('me', headers=request_headers()).data
-            user_name = user_profile['displayName']
+        else:
+            return False
 
-            profile_pic = UPLOAD_FOLDER + filename
-            print (profile_pic)
-            print (type(profile_pic))
-            # upload profile photo to OneDrive
-            upload_response = upload_file(client=MSGRAPH, filename=profile_pic)
-            if str(upload_response.status).startswith('2'):
-                # create a sharing link for the uploaded photo
-                link_url = sharing_link(client=MSGRAPH, item_id=upload_response.data['id'])
+def match_results(fn):
+    match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',fn)
+    if not match:
+        return RaiseError()
+    else:
+        results = MSGRAPH.get("me/drive/root/search(q='%s')?select=name" % match.group(1), headers=request_headers()).data
+        InitialDocument = ISODocument(getPartsOfFile(fn)[0], getPartsOfFile(fn)[1], getPartsOfFile(fn)[2], getPartsOfFile(fn)[3], getPartsOfFile(fn)[4])
+        documents = [ISODocumentFactory.CreateDocParts(result['name']) for result in results['value'] if ISODocument.sameFile(result['name'],fn) == True]# documents = [ISODocumentFactory.returnVersion(result['name']) for result in results['value'] if ((File_ext == result['name'][result['name'].rfind(".")+1:]) and (getPartsOfFile(result['name'])[0] == getPartsOfFile(searched_File_ID)[0]))]
+        if not documents:
+            #verify that filename is a record or form first (DONE)
+            ISODocumentFactory.NoExisting(fn)
+            filename = fn
+            # do something -- create documents with that name and version DO NOT RAISE ERROR (DONE)
+        else:
+            sortedDocuments = sorted(documents, reverse = True, key=lambda doc:doc[2])
+            # print (sortedDocuments)
+            Latest_Doc_version = sortedDocuments[0][2]
+            # if (int(Latest_Doc_version) < int(getPartsOfFile(fn)[2])):
+            #     filename = fn
+            # else:
+            if sortedDocuments[0][2] < getPartsOfFile(fn)[2]:
+                filename = fn
             else:
-                link_url = ''
+                InitialDocument.version = Latest_Doc_version 
+                filename = InitialDocument.file_name()
+        return filename
 
-            # body = flask.render_template('email.html', name=user_name, link_url=link_url)
-            return "<h1>Succesful</h1><p>Your item has been uploaded into your personal onedrive documents.</p>"
+def file_save(filename, file):
+    file.save(os.path.join(APP.config['UPLOAD_FOLDER'], filename))
+    user_profile = MSGRAPH.get('me', headers=request_headers()).data
+    user_name = user_profile['displayName']
+    profile_pic = UPLOAD_FOLDER + filename
+    upload_response = upload_file(client=MSGRAPH, filename=profile_pic)
+    if str(upload_response.status).startswith('2'):
+        link_url = sharing_link(client=MSGRAPH, item_id=upload_response.data['id'])
+    else:
+        link_url = ''
+    return "<h1>Succesful</h1><p>Your item has been uploaded into your personal onedrive documents.</p>"
+
+#################################################################
+
+
+@APP.route('/upload', methods=['GET', 'POST'])
+def upload():
+    # if request.method == 'POST':
+    #     if 'file' not in request.files:
+    #         flash('No file part')
+    #         return redirect(request.url)
+    #     file = request.files['file']
+    #     if file.filename == '':
+    #         flash('No selected file')
+    #         return redirect(request.url)
+    #     fn = file.filename
+    #     if file and allowed_file(file.filename):
+    if upload_secure_files(request) == True:
+        file = request.files['file']
+        fn = file.filename
+        @after_this_request     
+        def remove_file(response):
+            match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',fn)
+            if match:
+                print ("Matches")
+                print(response)
+                print(type(response))
+                os.remove((APP.config['UPLOAD_FOLDER']+filename))
+                return response
+            else:
+                return response
+
+        # match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',fn)
+        # if not match:
+        #     print("Test")
+        #     return RaiseError()
+        # else:
+        #     results = MSGRAPH.get("me/drive/root/search(q='%s')?select=name" % match.group(1), headers=request_headers()).data
+        #     InitialDocument = ISODocument(getPartsOfFile(fn)[0], getPartsOfFile(fn)[1], getPartsOfFile(fn)[2], getPartsOfFile(fn)[3], getPartsOfFile(fn)[4])
+        #     documents = [ISODocumentFactory.CreateDocParts(result['name']) for result in results['value'] if ISODocument.sameFile(result['name'],fn) == True]# documents = [ISODocumentFactory.returnVersion(result['name']) for result in results['value'] if ((File_ext == result['name'][result['name'].rfind(".")+1:]) and (getPartsOfFile(result['name'])[0] == getPartsOfFile(searched_File_ID)[0]))]
+        #     print (documents)
+        #     if not documents:
+        #         #verify that filename is a record or form first DONE
+        #         ISODocumentFactory.NoExisting(fn)
+        #         filename = fn
+        #         # do something -- create documents with that name and version DO NOT RAISE ERROR DONE
+        #     else:
+        #         sortedDocuments = sorted(documents, reverse = True, key=lambda doc:doc[2])
+        #         # print (sortedDocuments)
+        #         Latest_Doc_version = sortedDocuments[0][2]
+        #         # if (int(Latest_Doc_version) < int(getPartsOfFile(fn)[2])):
+        #         #     filename = fn
+        #         # else:
+        #         if sortedDocuments[0][2]< getPartsOfFile(fn)[2]:
+        #             filename = fn
+        #         else:
+        #             InitialDocument.version = Latest_Doc_version 
+        #             filename = InitialDocument.file_name()
+        filename = match_results(fn)
+
+        # file.save(os.path.join(APP.config['UPLOAD_FOLDER'], filename))
+        # user_profile = MSGRAPH.get('me', headers=request_headers()).data
+        # user_name = user_profile['displayName']
+        # profile_pic = UPLOAD_FOLDER + filename
+        # upload_response = upload_file(client=MSGRAPH, filename=profile_pic)
+        # if str(upload_response.status).startswith('2'):
+        #     link_url = sharing_link(client=MSGRAPH, item_id=upload_response.data['id'])
+        # else:
+        #     link_url = ''
+        # return "<h1>Succesful</h1><p>Your item has been uploaded into your personal onedrive documents.</p>"
+        return file_save(filename, file)
                     
-
-                    # return redirect(url_for('uploaded_file',filename=filename))
-
-    return '''
-    <!doctype html>
-    <title>Upload new File</title>
-    <h1>Upload new File</h1>
-    <form method=post enctype=multipart/form-data>
-      <input type=file name=file>
-      <input type=submit value=Upload>
-    </form>
-    '''
-
-
+    return render_template("upload_page.html")
 
 @APP.route('/search/<string:search_name>', methods=['GET'] )
 def searches(search_name):
@@ -127,6 +327,7 @@ def searches(search_name):
             print (x["webUrl"][(x["webUrl"].index("Documents")):])
     return jsonify(path_list)
 
+#####################################################DOWNLOAD starts here##############################################################################
 @APP.route('/download/', methods=['GET','POST']) 
 def down_search():
     if request.method == 'POST':
@@ -136,32 +337,66 @@ def down_search():
     return render_template("download.html")
 
 @APP.route('/download/<string:searched_name>', methods=['GET','POST']) 
-def downloadz(searched_name):
-    search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=weburl" % searched_name, headers=request_headers()).data
-    path_list = []
-    for x in search_path["value"]:
-        if x["webUrl"]:
-            path_list.append(x["webUrl"][(x["webUrl"].index("Documents"))+10:])
-            # print (x["webUrl"][(x["webUrl"].index("Documents"))+10:])
+def download_function(searched_name):
+    if request.method == 'GET':
+        onedrive_route = "me/drive/root/search(q='%s')?select=weburl" % searched_name
+        search_path = MSGRAPH.get(onedrive_route, headers=request_headers()).data
+        print (onedrive_route)
+        path_list = []
+        for x in search_path["value"]:
+            if x["webUrl"]:
+                path_list.append(x["webUrl"][(x["webUrl"].index("Documents"))+10:])
 
-    if path_list == []:
-        return "<h1>Error 404</h1><p>File not found in Onedrive.</p>"
+        if path_list == []:
+            return "<h1>Error 404</h1><p>File not found in Onedrive.</p>"
+        return render_template('download_page.html', path = path_list, name = searched_name)
 
     if request.method == 'POST':
-        pathsz = request.form['html_path']
+        route = request.form['html_path']
+
+        photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
+
+        if "/" in route:
+            route = route[route.rfind("/")+1:]
+        return flask.redirect('/download/file/%s'% route)
+
+
+@APP.route('/download/file/<string:route>', methods=['GET']) 
+def download_function_final(route):
+
+    if request.method == 'GET':
+        # route = request.form['html_path']
+        print("route", route)
         # namesz = request.form['html_name']
-        # local = request.form['html_local']
-
-        photo,filename = profile_photo(pathsz=pathsz,client=MSGRAPH, user_id='me', save_as= namesz)
-        return return_files_tut(filename,namesz)
-    return render_template('download_page.html', path = path_list, name = searched_name)
-
-    # return flask.redirect('/download/')
 
 
-def profile_photo(*, pathsz, client=MSGRAPH, user_id='me', save_as=None):
+        # photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
+        # print ("PHOTO ---------------------> %s"% photo)
+        # print ("FILENAME ------------------> %s" % filename)
+        return return_files_tut("Placeholder.txt")
 
-    endpoint = 'me/drive/root:/'+pathsz+':/content' if user_id == 'me' else f'users/{user_id}/$value'
+
+# @APP.route('/download/file/', methods=['GET']) 
+# def download_function(searched_name):
+
+#     if request.method == 'GET':
+#         route = request.form['html_path']
+#         print("route", route)
+#         # namesz = request.form['html_name']
+
+#         photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
+#         print ("PHOTO ---------------------> %s"% photo)
+#         print ("FILENAME ------------------> %s" % filename)
+#         return return_files_tut(filename)
+
+
+
+##########################################################################DOWNLOAD END#######################################################################
+
+
+def profile_photo(*, route, client=MSGRAPH, user_id='me', save_as=None):
+
+    endpoint = 'me/drive/root:/'+route+':/content' if user_id == 'me' else f'users/{user_id}/$value'
     photo_response = client.get(endpoint)
     photo = photo_response.raw_data
     filename = save_as + '.' + 'txt'
@@ -169,6 +404,7 @@ def profile_photo(*, pathsz, client=MSGRAPH, user_id='me', save_as=None):
     print("raw data", photo)
     with open(filename, 'wb') as fhandle:fhandle.write(photo)
     return (photo,filename)
+
 
 @MSGRAPH.tokengetter
 def get_token():
@@ -184,9 +420,15 @@ def request_headers(headers=None):
     return default_headers
 
 
-def return_files_tut(path, name):
+def return_files_tut(path):
     try:
-        return send_file(path.replace("/","\\"),attachment_filename=name)
+        @after_this_request
+        def remove_path(response):
+            os.remove(path)
+            print ("PATH --------->%s"%path)
+            return response        
+        return send_file(path, attachment_filename='Placeholder')
+
     except Exception as e:
         return str(e)
 
@@ -198,29 +440,13 @@ def sharing_link(*, client, item_id, link_type='view'):
                            format='json')
 
     if str(response.status).startswith('2'):
-        # status 201 = link created, status 200 = existing link returned
         return response.data['link']['webUrl']
 
 def upload_file(*, client, filename, folder=None):
-    """Upload a file to OneDrive for Business.
-    client  = user-authenticated flask-oauthlib client instance
-    filename = local filename; may include a path
-    folder = destination subfolder/path in OneDrive for Business
-             None (default) = root folder
-    File is uploaded and the response object is returned.
-    If file already exists, it is overwritten.
-    If folder does not exist, it is created.
-    API documentation:
-    https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/api/driveitem_put_content
-    """
     fname_only = os.path.basename(filename)
-
-    # create the Graph endpoint to be used
     if folder:
-        # create endpoint for upload to a subfoldero
         endpoint = f'me/drive/root:/{folder}/{fname_only}:/content'
     else:
-        # create endpoint for upload to drive root folder
         endpoint = f'me/drive/root/children/{fname_only}/content'
 
     content_type, _ = mimetypes.guess_type(fname_only)
@@ -233,10 +459,12 @@ def upload_file(*, client, filename, folder=None):
                       content_type=content_type)
 
 ssl_dir: str = os.path.dirname(__file__).replace('src', 'ssl')
-key_path: str = os.path.join(ssl_dir, 'server.key')
-crt_path: str = os.path.join(ssl_dir, 'server.crt')
+key_path: str = os.path.join(ssl_dir, 'ssl/server.key')
+crt_path: str = os.path.join(ssl_dir, 'ssl/server.crt')
 ssl_context: tuple = (crt_path, key_path)
 
 
 if __name__ == "__main__":
-    APP.run('0.0.0.0', 8000, debug=False, ssl_context=ssl_context)
+    APP.run('0.0.0.0', 8000, debug=True, ssl_context=ssl_context)
+
+
