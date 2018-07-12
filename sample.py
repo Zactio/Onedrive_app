@@ -363,11 +363,18 @@ def download_function(searched_name):
             # file_name_docx = route[route.rfind("/")+1:]
             # r = requests.get(url, allow_redirects=True)
             # open('%s'% file_name_docx, 'wb').write(r.content)
+            for x in search_path['value']:
+                if route in x['webUrl']:
+                    item_id = x['id']
 
-        photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
+            photo,filename = Docx_item(route=route, item_id = item_id,client=MSGRAPH, user_id='me', save_as= "Placeholder")
+        else:
 
-        if "/" in route:
-            route = route[route.rfind("/")+1:]
+            photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
+
+            if "/" in route:
+                route = route[route.rfind("/")+1:]
+                
         return flask.redirect('/download/file/%s'% route)
                          
 
@@ -422,7 +429,6 @@ def Docx_item(*, item_id, client=MSGRAPH, user_id='me', save_as=None):
     item_response = client.get(endpoint)
     photo = photo_response.raw_data
     filename = save_as + '.' + 'docx'
-    print(filename)
     print("raw data", photo)
     with open(filename, 'wb') as fhandle:fhandle.write(photo)
     return (photo,filename)
