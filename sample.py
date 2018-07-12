@@ -17,7 +17,7 @@ import config
 
 
 UPLOAD_FOLDER = 'static/templates/'
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'pdf', 'docx'])
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'pdf', "docx"])
 
 APP = flask.Flask(__name__, template_folder='static/templates')
 APP.debug = True
@@ -339,13 +339,16 @@ def down_search():
 @APP.route('/download/<string:searched_name>', methods=['GET','POST']) 
 def download_function(searched_name):
     if request.method == 'GET':
-        onedrive_route = "me/drive/root/search(q='%s')?select=weburl" % searched_name
+
+        onedrive_route = "me/drive/root/search(q='%s')" % searched_name
         search_path = MSGRAPH.get(onedrive_route, headers=request_headers()).data
         print (onedrive_route)
         path_list = []
         for x in search_path["value"]:
-            if x["webUrl"]:
+            if "Documents" in x["webUrl"]:
                 path_list.append(x["webUrl"][(x["webUrl"].index("Documents"))+10:])
+            if "docx" in x["webUrl"]:
+                path_list.append(x["webUrl"][x["webUrl"].index("file=")+5:x["webUrl"].index("&action=")])
 
         if path_list == []:
             return "<h1>Error 404</h1><p>File not found in Onedrive.</p>"
@@ -354,12 +357,19 @@ def download_function(searched_name):
     if request.method == 'POST':
         route = request.form['html_path']
 
+        if "docx" in route: 
+            # url = 'http://google.com/favicon.ico'
+            # if "/" in route:
+            # file_name_docx = route[route.rfind("/")+1:]
+            # r = requests.get(url, allow_redirects=True)
+            # open('%s'% file_name_docx, 'wb').write(r.content)
+
         photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
 
         if "/" in route:
             route = route[route.rfind("/")+1:]
         return flask.redirect('/download/file/%s'% route)
-
+                         
 
 @APP.route('/download/file/<string:route>', methods=['GET']) 
 def download_function_final(route):
@@ -405,6 +415,17 @@ def profile_photo(*, route, client=MSGRAPH, user_id='me', save_as=None):
     with open(filename, 'wb') as fhandle:fhandle.write(photo)
     return (photo,filename)
 
+
+def Docx_item(*, item_id, client=MSGRAPH, user_id='me', save_as=None):
+
+    endpoint = '/me/drive/items/'+item_id+'/content' if user_id == 'me' else f'users/{user_id}/$value'
+    item_response = client.get(endpoint)
+    photo = photo_response.raw_data
+    filename = save_as + '.' + 'docx'
+    print(filename)
+    print("raw data", photo)
+    with open(filename, 'wb') as fhandle:fhandle.write(photo)
+    return (photo,filename)
 
 @MSGRAPH.tokengetter
 def get_token():
@@ -466,5 +487,4 @@ ssl_context: tuple = (crt_path, key_path)
 
 if __name__ == "__main__":
     APP.run('0.0.0.0', 8000, debug=True, ssl_context=ssl_context)
-
 
