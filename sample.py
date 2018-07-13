@@ -220,9 +220,10 @@ def match_results(fn):
             filename = fn
             # do something -- create documents with that name and version DO NOT RAISE ERROR (DONE)
         else:
-            sortedDocuments = sorted(documents, reverse = True, key=lambda doc:doc[2])
-            # print (sortedDocuments)
+            sortedDocuments = sorted(documents, key=lambda i: (int(i[2])), reverse=True)
+            print (sortedDocuments)
             Latest_Doc_version = sortedDocuments[0][2]
+            print (Latest_Doc_version)
             # if (int(Latest_Doc_version) < int(getPartsOfFile(fn)[2])):
             #     filename = fn
             # else:
