@@ -227,7 +227,7 @@ def match_results(fn):
             # if (int(Latest_Doc_version) < int(getPartsOfFile(fn)[2])):
             #     filename = fn
             # else:
-            if sortedDocuments[0][2] < getPartsOfFile(fn)[2]:
+            if int(Latest_Doc_version) < int(getPartsOfFile(fn)[2]):
                 filename = fn
             else:
                 InitialDocument.version = Latest_Doc_version 
