@@ -245,6 +245,8 @@ def file_save(filename, file):
         link_url = ''
     return "<h1>Succesful</h1><p>Your item has been uploaded into your personal onedrive documents.</p>"
 
+
+
 #################################################################
 
 
@@ -328,6 +330,12 @@ def searches(search_name):
     return jsonify(path_list)
 
 #####################################################DOWNLOAD starts here##############################################################################
+
+def download_msgraph_search(searched_name):
+    onedrive_route = "me/drive/root/search(q='%s')" % searched_name
+    search_path = MSGRAPH.get(onedrive_route, headers=request_headers()).data
+    return (search_path)
+
 @APP.route('/download/', methods=['GET','POST']) 
 def down_search():
     if request.method == 'POST':
@@ -340,14 +348,14 @@ def down_search():
 def download_function(searched_name):
     if request.method == 'GET':
 
-        onedrive_route = "me/drive/root/search(q='%s')" % searched_name
-        search_path = MSGRAPH.get(onedrive_route, headers=request_headers()).data
+        search_path = download_msgraph_search(searched_name)
         print (onedrive_route)
         path_list = []
         for x in search_path["value"]:
             if "Documents" in x["webUrl"]:
                 path_list.append(x["webUrl"][(x["webUrl"].index("Documents"))+10:])
             if "docx" in x["webUrl"]:
+                print ("WEBURL.docx-----------------------------> TRUE")
                 path_list.append(x["webUrl"][x["webUrl"].index("file=")+5:x["webUrl"].index("&action=")])
 
         if path_list == []:
@@ -357,7 +365,10 @@ def download_function(searched_name):
     if request.method == 'POST':
         route = request.form['html_path']
 
-        if "docx" in route: 
+        if ".docx" in route: 
+            match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',string)
+            searched_name = match.group(1)
+            search_path = download_msgraph_search(searched_name)
             # url = 'http://google.com/favicon.ico'
             # if "/" in route:
             # file_name_docx = route[route.rfind("/")+1:]
@@ -374,7 +385,7 @@ def download_function(searched_name):
 
             if "/" in route:
                 route = route[route.rfind("/")+1:]
-                
+
         return flask.redirect('/download/file/%s'% route)
                          
 
