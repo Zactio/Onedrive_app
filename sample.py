@@ -349,7 +349,6 @@ def download_function(searched_name):
     if request.method == 'GET':
 
         search_path = download_msgraph_search(searched_name)
-        print (onedrive_route)
         path_list = []
         for x in search_path["value"]:
             if "Documents" in x["webUrl"]:
@@ -366,8 +365,9 @@ def download_function(searched_name):
         route = request.form['html_path']
 
         if ".docx" in route: 
-            match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',string)
-            searched_name = match.group(1)
+            # match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',route)
+            # searched_name = match.group(1
+            searched_name = getPartsOfFile(route)[0]
             search_path = download_msgraph_search(searched_name)
             # url = 'http://google.com/favicon.ico'
             # if "/" in route:
@@ -378,7 +378,7 @@ def download_function(searched_name):
                 if route in x['webUrl']:
                     item_id = x['id']
 
-            photo,filename = Docx_item(route=route, item_id = item_id,client=MSGRAPH, user_id='me', save_as= "Placeholder")
+            photo, filename = Docx_item(item_ids = item_id,client=MSGRAPH, user_id='me', save_as= "Placeholder")
         else:
 
             photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
@@ -401,7 +401,13 @@ def download_function_final(route):
         # photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
         # print ("PHOTO ---------------------> %s"% photo)
         # print ("FILENAME ------------------> %s" % filename)
-        return return_files_tut("Placeholder.txt")
+        endpoint = getPartsOfFile(route)[4]
+        if endpoint == "docx":
+            return return_files_tut("Placeholder.docx")
+        elif endpoint == "txt":
+            return return_files_tut("Placeholder.txt")
+        else:
+            return RaiseError()
 
 
 # @APP.route('/download/file/', methods=['GET']) 
@@ -434,15 +440,15 @@ def profile_photo(*, route, client=MSGRAPH, user_id='me', save_as=None):
     return (photo,filename)
 
 
-def Docx_item(*, item_id, client=MSGRAPH, user_id='me', save_as=None):
-
-    endpoint = '/me/drive/items/'+item_id+'/content' if user_id == 'me' else f'users/{user_id}/$value'
+def Docx_item(*, item_ids, client=MSGRAPH, user_id='me', save_as=None):
+    print ("item id ------------------------------------->", item_ids)
+    endpoint = '/me/drive/items/'+item_ids+'/content' if user_id == 'me' else f'users/{user_id}/$value'
     item_response = client.get(endpoint)
-    photo = photo_response.raw_data
+    item = item_response.raw_data
     filename = save_as + '.' + 'docx'
-    print("raw data", photo)
-    with open(filename, 'wb') as fhandle:fhandle.write(photo)
-    return (photo,filename)
+    print("raw data", item)
+    with open(filename, 'wb') as fhandle:fhandle.write(item)
+    return (item,filename)
 
 @MSGRAPH.tokengetter
 def get_token():
