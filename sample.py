@@ -168,7 +168,7 @@ class ISODocument():
             else:
                 return False
         else:
-            RaiseError()
+            return RaiseError()
 
     # def makeNextFormString(self):
     #     return self.filename#self would be the latest document 
@@ -452,7 +452,7 @@ def profile_photo(*, route, client=MSGRAPH, user_id='me', save_as=None):
     with open(filename, 'wb') as fhandle:fhandle.write(photo)
     return (photo,filename)
 
-    
+
 def Docx_item(*, item_ids, client=MSGRAPH, user_id='me', save_as=None):
     print ("item id ------------------------------------->", item_ids)
     endpoint = '/me/drive/items/'+str(item_ids)+'/content' if user_id == 'me' else f'users/{user_id}/$value'
