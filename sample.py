@@ -140,8 +140,12 @@ class ISODocument():
         self.description = description
         self.extension = extension
 
+
     def file_name(self):
         return self.numericId+self.stringId+str(int(self.version)+1)+self.description+ '.' + self.extension
+
+    def file_superseed_version(self):
+        return self.numericId+self.stringId+self.version+self.description+ '.' + self.extension
 
         # raise ValueError('A very specific bad thing happened.')
 
@@ -232,6 +236,14 @@ def match_results(fn):
             else:
                 InitialDocument.version = Latest_Doc_version 
                 filename = InitialDocument.file_name()
+                #####################################################TAKE NOTE###############################################
+                #os file_superseed_version()
+                # superseed_id = ""
+                # for items in results['value']:
+                #     if file_superseed_version in items['name']:
+                #         superseed_id = items['id']
+
+                
         return filename
 
 def file_save(filename, file):
@@ -317,7 +329,7 @@ def upload():
         #     link_url = ''
         # return "<h1>Succesful</h1><p>Your item has been uploaded into your personal onedrive documents.</p>"
         return file_save(filename, file)
-                    
+
     return render_template("upload_page.html")
 
 @APP.route('/search/<string:search_name>', methods=['GET'] )
@@ -367,7 +379,7 @@ def download_function(searched_name):
 
         if ".docx" in route: 
             # match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',route)
-            # searched_name = match.group(1
+            # searched_name = match.group(1)
             searched_name = getPartsOfFile(route)[0]
             search_path = download_msgraph_search(searched_name)
             # url = 'http://google.com/favicon.ico'
@@ -381,7 +393,6 @@ def download_function(searched_name):
 
             photo, filename = Docx_item(item_ids = item_id,client=MSGRAPH, user_id='me', save_as= "Placeholder")
         else:
-
             photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
 
             if "/" in route:
@@ -432,6 +443,7 @@ def download_function_final(route):
 def profile_photo(*, route, client=MSGRAPH, user_id='me', save_as=None):
 
     endpoint = 'me/drive/root:/'+route+':/content' if user_id == 'me' else f'users/{user_id}/$value'
+    print ("endpoint------------------->", endpoint)
     photo_response = client.get(endpoint)
     photo = photo_response.raw_data
     filename = save_as + '.' + 'txt'
@@ -440,10 +452,11 @@ def profile_photo(*, route, client=MSGRAPH, user_id='me', save_as=None):
     with open(filename, 'wb') as fhandle:fhandle.write(photo)
     return (photo,filename)
 
-
+    
 def Docx_item(*, item_ids, client=MSGRAPH, user_id='me', save_as=None):
     print ("item id ------------------------------------->", item_ids)
-    endpoint = '/me/drive/items/'+item_ids+'/content' if user_id == 'me' else f'users/{user_id}/$value'
+    endpoint = '/me/drive/items/'+str(item_ids)+'/content' if user_id == 'me' else f'users/{user_id}/$value'
+    print ("endpoint------------------->", endpoint)
     item_response = client.get(endpoint)
     item = item_response.raw_data
     filename = save_as + '.' + 'docx'
