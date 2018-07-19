@@ -1,0 +1,8 @@
+[
+  "test_sample.py::test_isREc",
+  "test_sample.py::test_isForm",
+  "test_sample.py::test_getPartsOfFile",
+  "test_sample.py::test_filename",
+  "test_sample.py::test_samefile",
+  "test_sample.py::test_integrate_ok"
+]
