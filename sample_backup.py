@@ -1,0 +1,315 @@
+#Python Onedrive application
+#Done by: Zachary and Brandnon
+
+import base64
+import mimetypes
+import os
+import pprint
+import uuid
+import flask
+from flask_oauthlib.client import OAuth
+from flask import request, jsonify,send_file,render_template,Flask, flash, request, redirect, url_for, send_from_directory, after_this_request
+from flask_uploads import UploadSet, configure_uploads, ALL
+from jinja2 import Template
+from werkzeug.utils import secure_filename
+import config
+
+#<name>_<version>.txt
+#fileA_1.txt
+#fileB_1.txt
+#fileA_2.txt
+#fileA_3.txt
+
+#upload
+#find current latest version of file if exists
+#save as 1 version later.
+#e.g. if fileA_2.txt exists on onedrive, and the user uploads fileA.txt, save it as fileA_3.txt
+#assume that when the user uploads the file, it is versionless. e.g. only fileA.txt
+
+#search
+#show only the latest version per file. e.g. based on the files above, show the user fileA_3.txt and fileB_1.txt
+
+#python functions sort(), 
+
+
+UPLOAD_FOLDER = 'static/templates/'
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'pdf'])
+
+APP = flask.Flask(__name__, template_folder='static/templates')
+APP.debug = True
+APP.secret_key = 'development'
+OAUTH = OAuth(APP)
+MSGRAPH = OAUTH.remote_app(
+    'microsoft',
+    consumer_key=config.CLIENT_ID,
+    consumer_secret=config.CLIENT_SECRET,
+    request_token_params={'scope': config.SCOPES},
+    base_url=config.RESOURCE + config.API_VERSION + '/',
+    request_token_url=None,
+    access_token_method='POST',
+    access_token_url=config.AUTHORITY_URL + config.TOKEN_ENDPOINT,
+    authorize_url=config.AUTHORITY_URL + config.AUTH_ENDPOINT)
+
+
+APP.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+@APP.route('/')
+def homepage():
+    return flask.render_template('homepage.html')
+
+@APP.route('/login')
+def login():
+    flask.session['state'] = str(uuid.uuid4())
+    return MSGRAPH.authorize(callback=config.REDIRECT_URI, state=flask.session['state'])
+
+@APP.route('/login/authorized')
+def authorized():
+    if str(flask.session['state']) != str(flask.request.args['state']):
+        raise Exception('state returned to redirect URL does not match!')
+    response = MSGRAPH.authorized_response()
+    flask.session['access_token'] = response['access_token']
+    return flask.redirect('/options')
+
+
+
+@APP.route('/options/')
+def options():
+    return flask.render_template('options.html')
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@APP.route('/search', methods=['GET', 'POST'] )
+def upload_search():
+    if request.methods == 'POST':
+        search_name = request.form['html_search']
+        search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=weburl" % search_name, headers=request_headers()).data
+        path_list = []
+        for x in search_path["value"]:
+            if x["name"]:
+                path_list.append(x["webUrl"][(x["webUrl"].index("Documents")):])
+                print (x["webUrl"][(x["webUrl"].index("Documents")):])
+        return jsonify(path_list)
+
+    return render_template("upload_search.html")
+
+
+@APP.route('/upload', methods=['GET', 'POST'])
+def upload():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        fn = file.filename
+        if file and allowed_file(file.filename):
+            @after_this_request
+            def remove_file(response):
+                os.remove((APP.config['UPLOAD_FOLDER']+filename))
+                return response
+############################################################################
+            fn = file.filename
+            # fn = secure_filename(file.filename)
+            # if fn.find("_") == True:
+            #     search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=name" % (fn[0:fn.rfind(".")]), headers=request_headers()).data
+
+            if fn[fn.rfind("_")+1:fn.rfind(".")].isdigit():
+                search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=name" % (fn[0:fn.rfind("_")]), headers=request_headers()).data
+
+            else:
+                search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=weburl" % (fn[0:fn.rfind(".")]), headers=request_headers()).data
+            file_version = []
+            create_file = False
+            elifs = False
+            print ("lel")
+            for x in search_path["value"]:
+                print ("test")
+                try:
+#########################################################################################
+                    if x['name'][x['name'].rfind("_")+1:x['name'].rfind(".")].isdigit():#checking to see if onedrive item has digit after _
+                        if fn[fn.rfind("_")+1:fn.rfind(".")].isdigit(): # checking to see if item selected has digit after _
+                #        if (x['name'][x["name"].rfind("_")+1:x["name"].rfind(".")]): #if existing file and version no. in onedrive Eg. FileA_1.txt
+                            if (x['name'][:x['name'].rfind("_")] == fn[:fn.rfind("_")]):
+                                file_version.append(x["name"][x["name"].rfind("_")+1:x["name"].rfind(".")])
+                                print ("if")
+                            else: 
+                                print ("sad1")
+                                continue
+                        else:# if no digit after _ in local file 
+                            if (x['name'][:x['name'].rfind("_")] == fn[:fn.rfind(".")]):
+                                file_version.append(x["name"][x["name"].rfind("_")+1:x["name"].rfind(".")])
+                                print ('if2')  
+                            else: 
+                                print ("sad2")
+                                continue              
+
+                    else:# if onedrive item has no digit after _
+                        if (x['name'][:x['name'].rfind(".")] == fn[:fn.rfind(".")]):# check if name before . is same for both onedrive item and local file selected
+                            if "name" in x:# if existing file but no new version no. in onedrive Eg. FileA.txt
+                                elifs = True
+                                print ("elif")
+                                continue
+                            else:# if no existing file in onedrive
+                                create_file = True
+                                print ("else")
+                                continue
+                except Exception as e:
+                    create_file = True
+                    print ("elsesad")
+                    continue
+
+#########################################################################################
+
+            if create_file == True: # create files if no existing files
+                # filename = secure_filename(file.filename)
+                filename = file.filename
+                print ("if2")
+            elif file_version == []: #update files if no existing versions but have file
+                # fn = secure_filename(file.filename)
+                filename = fn[0:fn.rfind(".")] + "_1" + fn[fn.rfind("."):]
+                print ("elif2")
+                # file.filename = fn[0:fn.rfind(".")] + "_1" + fn[fn.rfind("."):]
+            else: #update files
+                # fn = secure_filename(file.filename)
+                file_v = int(sorted(file_version, reverse=True)[0])
+                print (file_v)
+                if (fn[fn.rfind("_")+1:fn.rfind(".")]).isdigit(): #if local file selected has _ in filename
+                    filename = fn[0:fn.rfind("_")+1] + str(file_v+1) + fn[fn.rfind("."):]
+                    print (filename)
+                    print ("else2")
+                else:# if local file selected does not have _ in filename
+                    filename = fn[0:fn.rfind(".")] +"_" + str(file_v+1) + fn[fn.rfind("."):]
+                    print (filename)
+                    print ("else2.2")
+
+                # file.filename = fn[0:fn.rfind(".")] + "_1" + fn[fn.rfind("."):]
+############################################################################
+            file.save(os.path.join(APP.config['UPLOAD_FOLDER'], filename))
+            user_profile = MSGRAPH.get('me', headers=request_headers()).data
+            user_name = user_profile['displayName']
+            profile_pic = UPLOAD_FOLDER + filename
+            upload_response = upload_file(client=MSGRAPH, filename=profile_pic)
+            if str(upload_response.status).startswith('2'):
+                link_url = sharing_link(client=MSGRAPH, item_id=upload_response.data['id'])
+            else:
+                link_url = ''
+            return "<h1>Succesful</h1><p>Your item has been uploaded into your personal onedrive documents.</p>"
+                    
+
+    return render_template("upload_page.html")
+
+@APP.route('/search/<string:search_name>', methods=['GET'] )
+def searches(search_name):
+    search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=weburl" % search_name, headers=request_headers()).data
+    path_list = []
+    for x in search_path["value"]:
+        if x["webUrl"]:
+            path_list.append(x["webUrl"][(x["webUrl"].index("Documents")):])
+            print (x["webUrl"][(x["webUrl"].index("Documents")):])
+    return jsonify(path_list)
+
+@APP.route('/download/', methods=['GET','POST']) 
+def down_search():
+    if request.method == 'POST':
+        name_searched = request.form['search_file']
+        return flask.redirect("/download/%s"%name_searched)
+
+    return render_template("download.html")
+
+@APP.route('/download/<string:searched_name>', methods=['GET','POST']) 
+def download_function(searched_name):
+    search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=weburl" % searched_name, headers=request_headers()).data
+    path_list = []
+    for x in search_path["value"]:
+        if x["webUrl"]:
+            path_list.append(x["webUrl"][(x["webUrl"].index("Documents"))+10:])
+
+    if path_list == []:
+        return "<h1>Error 404</h1><p>File not found in Onedrive.</p>"
+
+    if request.method == 'POST':
+        route = request.form['html_path']
+        # namesz = request.form['html_name']
+
+        photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
+        return return_files_tut(filename)
+    return render_template('download_page.html', path = path_list, name = searched_name)
+
+
+def profile_photo(*, route, client=MSGRAPH, user_id='me', save_as=None):
+
+    endpoint = 'me/drive/root:/'+route+':/content' if user_id == 'me' else f'users/{user_id}/$value'
+    photo_response = client.get(endpoint)
+    photo = photo_response.raw_data
+    filename = save_as + '.' + 'txt'
+    print(filename)
+    print("raw data", photo)
+    with open(filename, 'wb') as fhandle:fhandle.write(photo)
+    return (photo,filename)
+
+@MSGRAPH.tokengetter
+def get_token():
+    return (flask.session.get('access_token'), '')
+
+def request_headers(headers=None):
+    default_headers = {'SdkVersion': 'sample-python-flask',
+                       'x-client-SKU': 'sample-python-flask',
+                       'client-request-id': str(uuid.uuid4()),
+                       'return-client-request-id': 'true'}
+    if headers:
+        default_headers.update(headers)
+    return default_headers
+
+
+def return_files_tut(path):
+    try:
+        @after_this_request
+        def remove_path(response):
+            os.remove(path)
+            print (path)
+            return response        
+        return send_file(path,attachment_filename="Placeholder")
+
+    except Exception as e:
+        return str(e)
+
+def sharing_link(*, client, item_id, link_type='view'):
+    endpoint = f'me/drive/items/{item_id}/createLink'
+    response = client.post(endpoint,
+                           headers=request_headers(),
+                           data={'type': link_type},
+                           format='json')
+
+    if str(response.status).startswith('2'):
+        return response.data['link']['webUrl']
+
+def upload_file(*, client, filename, folder=None):
+    fname_only = os.path.basename(filename)
+    if folder:
+        endpoint = f'me/drive/root:/{folder}/{fname_only}:/content'
+    else:
+        endpoint = f'me/drive/root/children/{fname_only}/content'
+
+    content_type, _ = mimetypes.guess_type(fname_only)
+    with open(filename, 'rb') as fhandle:
+        file_content = fhandle.read()
+
+    return client.put(endpoint,
+                      headers=request_headers({'content-type': content_type}),
+                      data=file_content,
+                      content_type=content_type)
+
+ssl_dir: str = os.path.dirname(__file__).replace('src', 'ssl')
+key_path: str = os.path.join(ssl_dir, 'ssl/server.key')
+crt_path: str = os.path.join(ssl_dir, 'ssl/server.crt')
+ssl_context: tuple = (crt_path, key_path)
+
+
+if __name__ == "__main__":
+    APP.run('0.0.0.0', 8000, debug=True, ssl_context=ssl_context)
+
