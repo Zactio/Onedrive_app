@@ -74,9 +74,13 @@ def upload_search():
         for x in search_path["value"]:
             if x["name"]:
                 path_list.append(x["webUrl"][(x["webUrl"].index("Documents")):])
+                print (x["webUrl"][(x["webUrl"].index("Documents")):])
         return jsonify(path_list)
 
     return render_template("upload_search.html")
+
+
+#########################################################################################################################
 
 def isForm(string):
     if string[0:1] == "f" or string[0:1] == "F":
@@ -102,9 +106,11 @@ class ISODocumentFactory():
     @staticmethod
     def createDocument(input_string):
         if isRecord(input_string) == True:
+            # return ISORecord(*getPartsOfFile(input_string))
             return ISODocument(getPartsOfFile(input_string)[0],getPartsOfFile(input_string)[1],getPartsOfFile(input_string)[2],getPartsOfFile(input_string)[3],getPartsOfFile(input_string)[4])
             
         elif isForm(input_string) == True: 
+            # return getPartsOfFile(input_string)
             return ISODocument(getPartsOfFile(input_string)[0],getPartsOfFile(input_string)[1],getPartsOfFile(input_string)[2],getPartsOfFile(input_string)[3],getPartsOfFile(input_string)[4])
         else:
             raise ValueError('Document is not a record or string.')
@@ -126,6 +132,7 @@ class ISODocumentFactory():
             return RaiseError()
         
 class ISODocument():
+    # [FormNumericId][FormStringId][FormVersion][StringDescription][Extension]
     def __init__(self, numericId, stringId, version, description, extension):
         self.numericId = numericId
         self.stringId = stringId
@@ -137,11 +144,22 @@ class ISODocument():
     def file_name(self):
         return self.numericId+self.stringId+str(int(self.version)+1)+self.description+ '.' + self.extension
 
-    def Supersede_raw_name(self):
+    def file_superseed_version(self):
         return self.numericId+self.stringId+self.version+self.description+ '.' + self.extension
 
-    def file_supersede_version(self):
-        return "(Superseded) "+self.numericId+self.stringId+self.version+self.description+ '.' + self.extension
+        # raise ValueError('A very specific bad thing happened.')
+
+    # def isForm(self):
+    #     if self.numericId[:1] == "f" or self.numericId[:1] == "F":
+    #         return True
+    #     else:
+    #         return False
+
+    # def isRecord(self):
+    #     if self.numericId[:1] == "r" or self.numericId[:1] == "R":
+    #         return True
+    #     else:
+    #         return False
 
     def sameFile(self, fn):
         if ((getPartsOfFile(self)[0][0:1] == 'F' or getPartsOfFile(self)[0][0:1] == 'R') and (getPartsOfFile(self)[4] == "docx" or getPartsOfFile(self)[4] == "txt")):
@@ -152,9 +170,30 @@ class ISODocument():
         else:
             return RaiseError()
 
+    # def makeNextFormString(self):
+    #     return self.filename#self would be the latest document 
+
+    # def makeNextRecordString(self):
+    #     return self.filename
+
+# class ISOForm(ISODocument):
+#     def makeNextDoumentString(self):
+#         #"F"+ self.numericId + self.stringId + str(int(Latestversion)+1) + self.description + '.' + self.extension
+#         pass
+#         #implement this
+#         #returns the filename of the next version
+
+# class ISORecord(ISODocument):
+#     def makeNextDocumentString(self):
+#         pass
+#         #implement this
 def RaiseError():
     return "<h1>Error</h1><p>Selected file is not a record or form.</p>"
+    # pass#raise error for when error needs to be raised; replaces all the hardcoded return errors
 
+############<class = "??">
+
+################################################UPLOAD FUNCTIONS FOR NEW UPLOAD
 def upload_secure_files(file):
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -180,54 +219,62 @@ def match_results(fn):
         InitialDocument = ISODocument(getPartsOfFile(fn)[0], getPartsOfFile(fn)[1], getPartsOfFile(fn)[2], getPartsOfFile(fn)[3], getPartsOfFile(fn)[4])
         documents = [ISODocumentFactory.CreateDocParts(result['name']) for result in results['value'] if ISODocument.sameFile(result['name'],fn) == True]# documents = [ISODocumentFactory.returnVersion(result['name']) for result in results['value'] if ((File_ext == result['name'][result['name'].rfind(".")+1:]) and (getPartsOfFile(result['name'])[0] == getPartsOfFile(searched_File_ID)[0]))]
         if not documents:
+            #verify that filename is a record or form first (DONE)
             ISODocumentFactory.NoExisting(fn)
             filename = fn
+            # do something -- create documents with that name and version DO NOT RAISE ERROR (DONE)
         else:
             sortedDocuments = sorted(documents, key=lambda i: (int(i[2])), reverse=True)
+            print (sortedDocuments)
             Latest_Doc_version = sortedDocuments[0][2]
-            # supersede_name = InitialDocument.file_supersede_version()
-
-            InitialDocument.version = Latest_Doc_version #monitor
-
+            print (Latest_Doc_version)
+            # if (int(Latest_Doc_version) < int(getPartsOfFile(fn)[2])):
+            #     filename = fn
+            # else:
             if int(Latest_Doc_version) < int(getPartsOfFile(fn)[2]):
                 filename = fn
             else:
-                # InitialDocument.version = Latest_Doc_version 
-                Supersede_version = InitialDocument.Supersede_raw_name()
-                #DO PATCH for the updating of supersede version.
-                item_of_supersede_id = [result['id'] for result in results['value'] if result['name'] == Supersede_version]
-                supersede_name = InitialDocument.file_supersede_version()
-                upload_supersede(client=MSGRAPH, item_id=item_of_supersede_id, supersede_name = supersede_name)
+                InitialDocument.version = Latest_Doc_version 
                 filename = InitialDocument.file_name()
+                #####################################################TAKE NOTE###############################################
+                #os file_superseed_version()
+                # superseed_id = ""
+                # for items in results['value']:
+                #     if file_superseed_version in items['name']:
+                #         superseed_id = items['id']
 
+                
         return filename
 
 def file_save(filename, file):
     file.save(os.path.join(APP.config['UPLOAD_FOLDER'], filename))
     user_profile = MSGRAPH.get('me', headers=request_headers()).data
     user_name = user_profile['displayName']
-    name_of_file = UPLOAD_FOLDER + filename
-    upload_response = upload_file(client=MSGRAPH, filename=name_of_file)
+    profile_pic = UPLOAD_FOLDER + filename
+    upload_response = upload_file(client=MSGRAPH, filename=profile_pic)
     if str(upload_response.status).startswith('2'):
         link_url = sharing_link(client=MSGRAPH, item_id=upload_response.data['id'])
     else:
         link_url = ''
     return "<h1>Succesful</h1><p>Your item has been uploaded into your personal onedrive documents.</p>"
 
-def upload_supersede(*, client, item_id, supersede_name):
-    endpoint = f'me/drive/items/{item_id}'
-    response = client.patch(endpoint,
-                           headers=request_headers(),
-                           data={'name': supersede_name},
-                           format='json')
 
-    # if str(response.status).startswith('2'):
-        # return response.data['link']['webUrl'] 
-        return response
+
+#################################################################
 
 
 @APP.route('/upload', methods=['GET', 'POST'])
 def upload():
+    # if request.method == 'POST':
+    #     if 'file' not in request.files:
+    #         flash('No file part')
+    #         return redirect(request.url)
+    #     file = request.files['file']
+    #     if file.filename == '':
+    #         flash('No selected file')
+    #         return redirect(request.url)
+    #     fn = file.filename
+    #     if file and allowed_file(file.filename):
     if upload_secure_files(request) == True:
         file = request.files['file']
         fn = file.filename
@@ -235,12 +282,52 @@ def upload():
         def remove_file(response):
             match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',fn)
             if match:
+                print ("Matches")
+                print(response)
+                print(type(response))
                 os.remove((APP.config['UPLOAD_FOLDER']+filename))
                 return response
             else:
                 return response
 
+        # match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',fn)
+        # if not match:
+        #     print("Test")
+        #     return RaiseError()
+        # else:
+        #     results = MSGRAPH.get("me/drive/root/search(q='%s')?select=name" % match.group(1), headers=request_headers()).data
+        #     InitialDocument = ISODocument(getPartsOfFile(fn)[0], getPartsOfFile(fn)[1], getPartsOfFile(fn)[2], getPartsOfFile(fn)[3], getPartsOfFile(fn)[4])
+        #     documents = [ISODocumentFactory.CreateDocParts(result['name']) for result in results['value'] if ISODocument.sameFile(result['name'],fn) == True]# documents = [ISODocumentFactory.returnVersion(result['name']) for result in results['value'] if ((File_ext == result['name'][result['name'].rfind(".")+1:]) and (getPartsOfFile(result['name'])[0] == getPartsOfFile(searched_File_ID)[0]))]
+        #     print (documents)
+        #     if not documents:
+        #         #verify that filename is a record or form first DONE
+        #         ISODocumentFactory.NoExisting(fn)
+        #         filename = fn
+        #         # do something -- create documents with that name and version DO NOT RAISE ERROR DONE
+        #     else:
+        #         sortedDocuments = sorted(documents, reverse = True, key=lambda doc:doc[2])
+        #         # print (sortedDocuments)
+        #         Latest_Doc_version = sortedDocuments[0][2]
+        #         # if (int(Latest_Doc_version) < int(getPartsOfFile(fn)[2])):
+        #         #     filename = fn
+        #         # else:
+        #         if sortedDocuments[0][2]< getPartsOfFile(fn)[2]:
+        #             filename = fn
+        #         else:
+        #             InitialDocument.version = Latest_Doc_version 
+        #             filename = InitialDocument.file_name()
         filename = match_results(fn)
+
+        # file.save(os.path.join(APP.config['UPLOAD_FOLDER'], filename))
+        # user_profile = MSGRAPH.get('me', headers=request_headers()).data
+        # user_name = user_profile['displayName']
+        # profile_pic = UPLOAD_FOLDER + filename
+        # upload_response = upload_file(client=MSGRAPH, filename=profile_pic)
+        # if str(upload_response.status).startswith('2'):
+        #     link_url = sharing_link(client=MSGRAPH, item_id=upload_response.data['id'])
+        # else:
+        #     link_url = ''
+        # return "<h1>Succesful</h1><p>Your item has been uploaded into your personal onedrive documents.</p>"
         return file_save(filename, file)
 
     return render_template("upload_page.html")
@@ -252,7 +339,10 @@ def searches(search_name):
     for x in search_path["value"]:
         if x["webUrl"]:
             path_list.append(x["webUrl"][(x["webUrl"].index("Documents")):])
+            print (x["webUrl"][(x["webUrl"].index("Documents")):])
     return jsonify(path_list)
+
+#####################################################DOWNLOAD starts here##############################################################################
 
 def download_msgraph_search(searched_name):
     onedrive_route = "me/drive/root/search(q='%s')" % searched_name
@@ -277,6 +367,7 @@ def download_function(searched_name):
             if "Documents" in x["webUrl"]:
                 path_list.append(x["webUrl"][(x["webUrl"].index("Documents"))+10:])
             if "docx" in x["webUrl"]:
+                print ("WEBURL.docx-----------------------------> TRUE")
                 path_list.append(x["webUrl"][x["webUrl"].index("file=")+5:x["webUrl"].index("&action=")])
 
         if path_list == []:
@@ -286,30 +377,92 @@ def download_function(searched_name):
     if request.method == 'POST':
         route = request.form['html_path']
 
-        searched_name = getPartsOfFile(route)[0]
-        search_path = download_msgraph_search(searched_name)
+        if ".docx" in route: 
+            # match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',route)
+            # searched_name = match.group(1)
+            searched_name = getPartsOfFile(route)[0]
+            search_path = download_msgraph_search(searched_name)
+            # url = 'http://google.com/favicon.ico'
+            # if "/" in route:
+            # file_name_docx = route[route.rfind("/")+1:]
+            # r = requests.get(url, allow_redirects=True)
+            # open('%s'% file_name_docx, 'wb').write(r.content)
+            for x in search_path['value']:
+                if route in x['webUrl']:
+                    item_id = x['id']
 
-        for x in search_path['value']:
-            if route in x['webUrl']:
-                item_id = x['id']
+            photo, filename = Docx_item(item_ids = item_id,client=MSGRAPH, user_id='me', save_as= "Placeholder")
+        else:
+            photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
+
+            if "/" in route:
+                route = route[route.rfind("/")+1:]
+
+        return flask.redirect('/download/file/%s'% route)
+                         
+
+@APP.route('/download/file/<string:route>', methods=['GET']) 
+def download_function_final(route):
+
+    if request.method == 'GET':
+        # route = request.form['html_path']
+        print("route", route)
+        # namesz = request.form['html_name']
 
 
-        download_link = download_url(route=route,client=MSGRAPH, user_id='me')
-        return flask.redirect(download_link) 
-       
+        # photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
+        # print ("PHOTO ---------------------> %s"% photo)
+        # print ("FILENAME ------------------> %s" % filename)
+        endpoint = getPartsOfFile(route)[4]
+        if endpoint == "docx":
+            return return_files_tut("Placeholder.docx")
+        elif endpoint == "txt":
+            return return_files_tut("Placeholder.txt")
+        else:
+            return RaiseError()
 
-def download_url(*, route, client=MSGRAPH, user_id='me', save_as=None):
 
-    endpoint = 'me/drive/root:/'+route if user_id == 'me' else f'users/{user_id}/$value'
-    download_response = client.get(endpoint)
-    downloadUrl_response = download_response.data
-    return downloadUrl_response['@microsoft.graph.downloadUrl']
-    
+# @APP.route('/download/file/', methods=['GET']) 
+# def download_function(searched_name):
+
+#     if request.method == 'GET':
+#         route = request.form['html_path']
+#         print("route", route)
+#         # namesz = request.form['html_name']
+
+#         photo,filename = profile_photo(route=route,client=MSGRAPH, user_id='me', save_as= "Placeholder")
+#         print ("PHOTO ---------------------> %s"% photo)
+#         print ("FILENAME ------------------> %s" % filename)
+#         return return_files_tut(filename)
 
 
-def debug_endpoint(endpoint, client):
+
+##########################################################################DOWNLOAD END#######################################################################
+
+
+def profile_photo(*, route, client=MSGRAPH, user_id='me', save_as=None):
+
+    endpoint = 'me/drive/root:/'+route+':/content' if user_id == 'me' else f'users/{user_id}/$value'
+    print ("endpoint------------------->", endpoint)
+    photo_response = client.get(endpoint)
+    photo = photo_response.raw_data
+    filename = save_as + '.' + 'txt'
+    print(filename)
+    print("raw data", photo)
+    with open(filename, 'wb') as fhandle:fhandle.write(photo)
+    return (photo,filename)
+
+
+def Docx_item(*, item_ids, client=MSGRAPH, user_id='me', save_as=None):
+    print ("item id ------------------------------------->", item_ids)
+    endpoint = '/me/drive/items/'+str(item_ids)+'/content' if user_id == 'me' else f'users/{user_id}/$value'
+    print ("endpoint------------------->", endpoint)
     item_response = client.get(endpoint)
     item = item_response.raw_data
+    filename = save_as + '.' + 'docx'
+    print("raw data", item)
+    with open(filename, 'wb') as fhandle:fhandle.write(item)
+    return (item,filename)
 
 @MSGRAPH.tokengetter
 def get_token():
@@ -330,6 +483,7 @@ def return_files_tut(path):
         @after_this_request
         def remove_path(response):
             os.remove(path)
+            print ("PATH --------->%s"%path)
             return response        
         return send_file(path, attachment_filename='Placeholder')
 
