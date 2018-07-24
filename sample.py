@@ -144,11 +144,13 @@ class ISODocument():
         return "(Superseded) "+self.numericId+self.stringId+self.version+self.description+ '.' + self.extension
 
     def sameFile(self, fn):
-        if ((getPartsOfFile(self)[0][0:1] == 'F' or getPartsOfFile(self)[0][0:1] == 'R') and (getPartsOfFile(self)[4] == "docx" or getPartsOfFile(self)[4] == "txt")):
-            if getPartsOfFile(self)[0] == getPartsOfFile(fn)[0] and self[self.rfind("."):] == fn[fn.rfind("."):]:
+        if ((getPartsOfFile(self)[0][0:1] == 'F' or getPartsOfFile(self)[0][0:1] == 'R') and (getPartsOfFile(self)[4] == "docx" or getPartsOfFile(self)[4] == "txt") and not "(Superseded)" in self): # if the onedrive item is a record/form and is a docx or txt file while not being a superseded document
+            if getPartsOfFile(self)[0] == getPartsOfFile(fn)[0] and self[self.rfind("."):] == fn[fn.rfind("."):]:#if the numeric id and extension of the uploaded item and item in onedrive are the same
                 return True
             else:
                 return False
+        elif("(Superseded)" in self):
+            return False
         else:
             return RaiseError()
 
@@ -176,7 +178,7 @@ def match_results(fn):
     if not match:
         return RaiseError()
     else:
-        results = MSGRAPH.get("me/drive/root/search(q='%s')?select=name" % match.group(1), headers=request_headers()).data
+        results = MSGRAPH.get("me/drive/root/search(q='%s')" % match.group(1), headers=request_headers()).data
         InitialDocument = ISODocument(getPartsOfFile(fn)[0], getPartsOfFile(fn)[1], getPartsOfFile(fn)[2], getPartsOfFile(fn)[3], getPartsOfFile(fn)[4])
         documents = [ISODocumentFactory.CreateDocParts(result['name']) for result in results['value'] if ISODocument.sameFile(result['name'],fn) == True]# documents = [ISODocumentFactory.returnVersion(result['name']) for result in results['value'] if ((File_ext == result['name'][result['name'].rfind(".")+1:]) and (getPartsOfFile(result['name'])[0] == getPartsOfFile(searched_File_ID)[0]))]
         if not documents:
@@ -196,8 +198,9 @@ def match_results(fn):
                 Supersede_version = InitialDocument.Supersede_raw_name()
                 #DO PATCH for the updating of supersede version.
                 item_of_supersede_id = [result['id'] for result in results['value'] if result['name'] == Supersede_version]
+                print (item_of_supersede_id)
                 supersede_name = InitialDocument.file_supersede_version()
-                upload_supersede(client=MSGRAPH, item_id=item_of_supersede_id, supersede_name = supersede_name)
+                upload_supersede(client=MSGRAPH, item_id=item_of_supersede_id[0], supersede_name = supersede_name)
                 filename = InitialDocument.file_name()
 
         return filename
@@ -223,7 +226,7 @@ def upload_supersede(*, client, item_id, supersede_name):
 
     # if str(response.status).startswith('2'):
         # return response.data['link']['webUrl'] 
-        return response
+    return response
 
 
 @APP.route('/upload', methods=['GET', 'POST'])
