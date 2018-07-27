@@ -271,10 +271,11 @@ def beautify_results(path_list):
             max_len_of_item = len(x)
 
     for x in range(0,num):
-        path_list.insert(x+x+1, '_'*max_len_of_item) 
+        path_list.insert(x+x+1, '-'*max_len_of_item) 
     results = """
     %s
-    """ % ("&soft".join(path_list))
+    """ % ("""
+            """.join(path_list))
     print(results)
     return results
 
