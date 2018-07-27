@@ -274,7 +274,7 @@ def beautify_results(path_list):
         path_list.insert(x+x+1, '_'*max_len_of_item) 
     results = """
     %s
-    """ % ("\n".join(path_list))
+    """ % ("<br>".join(path_list))
     print(results)
     return results
 
