@@ -141,7 +141,7 @@ class ISODocument():
         return self.numericId+self.stringId+self.version+self.description+ '.' + self.extension
 
     def file_supersede_version(self):
-        return "(Superseded) "+self.numericId+self.stringId+self.version+self.description+ '.' + self.extension
+        return "(Superseded)"+self.numericId+self.stringId+self.version+self.description+ '.' + self.extension
 
     def sameFile(self, fn):
         if ((getPartsOfFile(self)[0][0:1] == 'F' or getPartsOfFile(self)[0][0:1] == 'R') and (getPartsOfFile(self)[4] == "docx" or getPartsOfFile(self)[4] == "txt") and not "(Superseded)" in self): # if the onedrive item is a record/form and is a docx or txt file while not being a superseded document
@@ -262,6 +262,21 @@ def download_msgraph_search(searched_name):
     search_path = MSGRAPH.get(onedrive_route, headers=request_headers()).data
     return (search_path)
 
+def beautify_results(route):
+    route = ["four", "There are 40 characters in this sentence",  "string with 25 characters",  "test", "word 6"]
+    num = len(route)
+    max_len_of_item = 0
+
+    for x in route:
+        if len(x) > max_len_of_item:
+            max_len_of_item = len(x)
+
+    for x in range(0,num):
+        route.insert(x+x+1, '_'*max_len_of_item) 
+
+    # print ("\n".join(route))
+    return route
+
 @APP.route('/download/', methods=['GET','POST']) 
 def down_search():
     if request.method == 'POST':
@@ -281,14 +296,14 @@ def download_function(searched_name):
                 path_list.append(x["webUrl"][(x["webUrl"].index("Documents"))+10:])
             if "docx" in x["webUrl"]:
                 path_list.append(x["webUrl"][x["webUrl"].index("file=")+5:x["webUrl"].index("&action=")])
-
+ 
         if path_list == []:
             return "<h1>Error 404</h1><p>File not found in Onedrive.</p>"
         return render_template('download_page.html', path = path_list, name = searched_name)
 
     if request.method == 'POST':
         route = request.form['html_path']
-
+        route = beautify_results(route)
         searched_name = getPartsOfFile(route)[0]
         search_path = download_msgraph_search(searched_name)
 
