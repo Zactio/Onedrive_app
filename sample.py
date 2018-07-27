@@ -263,7 +263,6 @@ def download_msgraph_search(searched_name):
     return (search_path)
 
 def beautify_results(route):
-    route = ["four", "There are 40 characters in this sentence",  "string with 25 characters",  "test", "word 6"]
     num = len(route)
     max_len_of_item = 0
 
@@ -273,9 +272,11 @@ def beautify_results(route):
 
     for x in range(0,num):
         route.insert(x+x+1, '_'*max_len_of_item) 
-
-    # print ("\n".join(route))
-    return route
+    results = """
+    %s
+    """ % ("\n".join(route))
+    print(results)
+    return results
 
 @APP.route('/download/', methods=['GET','POST']) 
 def down_search():
