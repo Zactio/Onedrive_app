@@ -176,7 +176,7 @@ def upload_secure_files(file):
 def match_results(fn):
     match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',fn)
     if not match:
-        return RaiseError()
+        RaiseError()
     else:
         results = MSGRAPH.get("me/drive/root/search(q='%s')" % match.group(1), headers=request_headers()).data
         InitialDocument = ISODocument(getPartsOfFile(fn)[0], getPartsOfFile(fn)[1], getPartsOfFile(fn)[2], getPartsOfFile(fn)[3], getPartsOfFile(fn)[4])
