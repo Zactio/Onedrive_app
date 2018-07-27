@@ -275,7 +275,7 @@ def beautify_results(path_list):
     results = """
     %s
     """ % ("""
-            """.join(path_list))
+""".join(path_list))
     print(results)
     return results
 
