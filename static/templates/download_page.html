@@ -7,7 +7,7 @@
 	<form method="POST">
 		<fieldset>
 			<h3>Path(s) obtained with the name {{name}} are:</h3>
-			<h5>{{path}}{% autoescape false %}{{path}}{% endautoescape %}</h5>
+			<h5>{% autoescape false %}{{path}}{% endautoescape %}</h5>
 			File endpoint on OneDrive:<br>
 			<input type="text" name="html_path"><br>
 			<br><br>
