@@ -262,19 +262,19 @@ def download_msgraph_search(searched_name):
     search_path = MSGRAPH.get(onedrive_route, headers=request_headers()).data
     return (search_path)
 
-def beautify_results(route):
-    num = len(route)
+def beautify_results(path_list):
+    num = len(path_list)
     max_len_of_item = 0
 
-    for x in route:
+    for x in path_list:
         if len(x) > max_len_of_item:
             max_len_of_item = len(x)
 
     for x in range(0,num):
-        route.insert(x+x+1, '_'*max_len_of_item) 
+        path_list.insert(x+x+1, '_'*max_len_of_item) 
     results = """
     %s
-    """ % ("\n".join(route))
+    """ % ("\n".join(path_list))
     print(results)
     return results
 
@@ -300,11 +300,13 @@ def download_function(searched_name):
  
         if path_list == []:
             return "<h1>Error 404</h1><p>File not found in Onedrive.</p>"
+
+        path_list = route = beautify_results(path_list)
+            
         return render_template('download_page.html', path = path_list, name = searched_name)
 
     if request.method == 'POST':
         route = request.form['html_path']
-        route = beautify_results(route)
         searched_name = getPartsOfFile(route)[0]
         search_path = download_msgraph_search(searched_name)
 
