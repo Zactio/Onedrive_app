@@ -176,7 +176,7 @@ def upload_secure_files(file):
 def match_results(fn):
     match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)',fn)
     if not match:
-        RaiseError()
+        return False
     else:
         results = MSGRAPH.get("me/drive/root/search(q='%s')" % match.group(1), headers=request_headers()).data
         InitialDocument = ISODocument(getPartsOfFile(fn)[0], getPartsOfFile(fn)[1], getPartsOfFile(fn)[2], getPartsOfFile(fn)[3], getPartsOfFile(fn)[4])
@@ -244,7 +244,10 @@ def upload():
                 return response
 
         filename = match_results(fn)
-        return file_save(filename, file)
+        if filename == False:
+            return RaiseError()
+        else:
+            return file_save(filename, file)
 
     return render_template("upload_page.html")
 
@@ -272,9 +275,7 @@ def beautify_results(path_list):
 
     for x in range(0,num):
         path_list.insert(x+x+1, '_'*max_len_of_item) 
-    results = """
-%s
-""" % ("<br/><br/>".join(path_list))
+    results = "%s" % ("<br/><br/>".join(path_list))
     print(results)
     return results
 
@@ -285,6 +286,7 @@ def down_search():
         return flask.redirect("/download/%s"%name_searched)
 
     return render_template("download.html")
+
 
 @APP.route('/download/<string:searched_name>', methods=['GET','POST']) 
 def download_function(searched_name):
