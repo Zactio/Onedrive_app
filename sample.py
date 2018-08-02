@@ -100,9 +100,8 @@ def upload_search():
             else:
                 continue
             
-        filename = max(new_list)
-        print(filename)
-        return filename
+        Latest_version = max(new_list)
+        return render_template('search_latest_version.html', version=version)
     return render_template('upload_search.html')
 
 ################################################################################################################################
