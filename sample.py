@@ -64,20 +64,7 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-##############################################################################################################################
-# @APP.route('/search', methods=['GET', 'POST'] )
-# def upload_search():
-#     if request.methods == 'POST':
-#         search_name = request.form['html_search']
-#         search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=weburl" % search_name, headers=request_headers()).data
-#         path_list = []
-#         for x in search_path["value"]:
-#             if x["name"]:
-#                 path_list.append(x["webUrl"][(x["webUrl"].index("Documents")):])
-#         return jsonify(path_list)
 
-#     return render_template("upload_search.html")
-############################################################GET UPLOAD_SEARCH.HTML from Brandon###############################
 @APP.route('/search', methods=['GET', 'POST'] )
 def upload_search():
     if request.method == 'POST': 
@@ -104,7 +91,6 @@ def upload_search():
         return render_template('search_latest_version.html', version=Latest_version)
     return render_template('upload_search.html')
 
-################################################################################################################################
 def isForm(string):
     if string[0:1] == "f" or string[0:1] == "F":
         return True
@@ -214,16 +200,13 @@ def match_results(fn):
         else:
             sortedDocuments = sorted(documents, key=lambda i: (int(i[2])), reverse=True)
             Latest_Doc_version = sortedDocuments[0][2]
-            # supersede_name = InitialDocument.file_supersede_version()
 
             InitialDocument.version = Latest_Doc_version
 
             if int(Latest_Doc_version) < int(getPartsOfFile(fn)[2]):
                 filename = fn
             else:
-                # InitialDocument.version = Latest_Doc_version 
                 Supersede_version = InitialDocument.Supersede_raw_name()
-                #DO PATCH for the updating of supersede version.
                 item_of_supersede_id = [result['id'] for result in results['value'] if result['name'] == Supersede_version]
                 print (item_of_supersede_id)
                 supersede_name = InitialDocument.file_supersede_version()
@@ -251,8 +234,6 @@ def upload_supersede(*, client, item_id, supersede_name):
                            data={'name': supersede_name},
                            format='json')
 
-    # if str(response.status).startswith('2'):
-        # return response.data['link']['webUrl'] 
     return response
 
 
@@ -277,15 +258,6 @@ def upload():
             return file_save(filename, file)
 
     return render_template("upload_page.html")
-
-# @APP.route('/search/<string:search_name>', methods=['GET'] )
-# def searches(search_name):
-#     search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=weburl" % search_name, headers=request_headers()).data
-#     path_list = []
-#     for x in search_path["value"]:
-#         if x["webUrl"]:
-#             path_list.append(x["webUrl"][(x["webUrl"].index("Documents")):])
-#     return jsonify(path_list)
 
 def download_msgraph_search(searched_name):
     onedrive_route = "me/drive/root/search(q='%s')" % searched_name
