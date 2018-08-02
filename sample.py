@@ -101,7 +101,7 @@ def upload_search():
                 continue
             
         Latest_version = max(new_list)
-        return render_template('search_latest_version.html', version=version)
+        return render_template('search_latest_version.html', version=Latest_version)
     return render_template('upload_search.html')
 
 ################################################################################################################################
