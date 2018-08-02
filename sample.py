@@ -64,20 +64,48 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+##############################################################################################################################
+# @APP.route('/search', methods=['GET', 'POST'] )
+# def upload_search():
+#     if request.methods == 'POST':
+#         search_name = request.form['html_search']
+#         search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=weburl" % search_name, headers=request_headers()).data
+#         path_list = []
+#         for x in search_path["value"]:
+#             if x["name"]:
+#                 path_list.append(x["webUrl"][(x["webUrl"].index("Documents")):])
+#         return jsonify(path_list)
 
+#     return render_template("upload_search.html")
+############################################################GET UPLOAD_SEARCH.HTML from Brandon###############################
 @APP.route('/search', methods=['GET', 'POST'] )
 def upload_search():
-    if request.methods == 'POST':
+    if request.method == 'POST': 
         search_name = request.form['html_search']
-        search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=weburl" % search_name, headers=request_headers()).data
+        search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=name" % search_name, headers=request_headers()).data
         path_list = []
+        new_list=[]
         for x in search_path["value"]:
             if x["name"]:
-                path_list.append(x["webUrl"][(x["webUrl"].index("Documents")):])
-        return jsonify(path_list)
+                path_list.append(x["name"])
+                print (x["name"])
 
-    return render_template("upload_search.html")
+   
+        x = search_name
+        for lists in path_list:
+            match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)', lists)
+            if match:
+                if x in lists:
+                    new_list.append(match.group(0))
+            else:
+                continue
+            
+        filename = max(new_list)
+        print(filename)
+        return filename
+    return render_template('upload_search.html')
 
+################################################################################################################################
 def isForm(string):
     if string[0:1] == "f" or string[0:1] == "F":
         return True
@@ -189,7 +217,7 @@ def match_results(fn):
             Latest_Doc_version = sortedDocuments[0][2]
             # supersede_name = InitialDocument.file_supersede_version()
 
-            InitialDocument.version = Latest_Doc_version #monitor
+            InitialDocument.version = Latest_Doc_version
 
             if int(Latest_Doc_version) < int(getPartsOfFile(fn)[2]):
                 filename = fn
@@ -286,6 +314,7 @@ def down_search():
         return flask.redirect("/download/%s"%name_searched)
 
     return render_template("download.html")
+
 
 
 @APP.route('/download/<string:searched_name>', methods=['GET','POST']) 
