@@ -96,7 +96,7 @@ def upload_search():
             match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)', lists)
             if match:
                 if x in lists:
-                    new_list.append(match.group(0))
+                    new_list.append(match.group(3))
             else:
                 continue
             
@@ -279,14 +279,14 @@ def upload():
 
     return render_template("upload_page.html")
 
-@APP.route('/search/<string:search_name>', methods=['GET'] )
-def searches(search_name):
-    search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=weburl" % search_name, headers=request_headers()).data
-    path_list = []
-    for x in search_path["value"]:
-        if x["webUrl"]:
-            path_list.append(x["webUrl"][(x["webUrl"].index("Documents")):])
-    return jsonify(path_list)
+# @APP.route('/search/<string:search_name>', methods=['GET'] )
+# def searches(search_name):
+#     search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=weburl" % search_name, headers=request_headers()).data
+#     path_list = []
+#     for x in search_path["value"]:
+#         if x["webUrl"]:
+#             path_list.append(x["webUrl"][(x["webUrl"].index("Documents")):])
+#     return jsonify(path_list)
 
 def download_msgraph_search(searched_name):
     onedrive_route = "me/drive/root/search(q='%s')" % searched_name
