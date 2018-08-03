@@ -80,15 +80,15 @@ def upload_search():
    
         x = search_name
         for lists in path_list:
-            match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)', lists)
+            match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(docx)', lists)# if document is .docx and matches ISO format
             if match:
                 if x in lists:
                     new_list.append(match.group(3))
             else:
                 continue
-            
+        path_list = beautify_results
         Latest_version = max(new_list)
-        return render_template('search_latest_version.html', version=Latest_version)
+        return render_template('search_latest_version.html', version=Latest_version, path = path_list)
     return render_template('upload_search.html')
 
 def isForm(string):
@@ -287,7 +287,6 @@ def down_search():
     return render_template("download.html")
 
 
-
 @APP.route('/download/<string:searched_name>', methods=['GET','POST']) 
 def download_function(searched_name):
     if request.method == 'GET':
@@ -303,7 +302,7 @@ def download_function(searched_name):
         if path_list == []:
             return "<h1>Error 404</h1><p>File not found in Onedrive.</p>"
 
-        path_list = route = beautify_results(path_list)
+        path_list = beautify_results(path_list)
             
         return render_template('download_page.html', path = path_list, name = searched_name)
 
