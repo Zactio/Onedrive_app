@@ -75,8 +75,6 @@ def upload_search():
         for x in search_path["value"]:
             if x["name"]:
                 path_list.append(x["name"])
-                print (x["name"])
-
    
         x = search_name
         for lists in path_list:
@@ -209,7 +207,6 @@ def match_results(fn):
             else:
                 Supersede_version = InitialDocument.Supersede_raw_name()
                 item_of_supersede_id = [result['id'] for result in results['value'] if result['name'] == Supersede_version]
-                print (item_of_supersede_id)
                 supersede_name = InitialDocument.file_supersede_version()
                 upload_supersede(client=MSGRAPH, item_id=item_of_supersede_id[0], supersede_name = supersede_name)
                 filename = InitialDocument.file_name()
@@ -276,7 +273,6 @@ def beautify_results(path_list):
     for x in range(0,num):
         path_list.insert(x+x+1, '_'*max_len_of_item) 
     results = "%s" % ("<br/><br/>".join(path_list))
-    print(results)
     return results
 
 @APP.route('/download/', methods=['GET','POST']) 
