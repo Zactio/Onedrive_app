@@ -75,11 +75,13 @@ def upload_search():
         for x in search_path["value"]:
             if x["name"]:
                 path_list.append(x["name"])
+        docx_list = []
    
         x = search_name
         for lists in path_list:
             match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(docx)', lists)# if document is .docx and matches ISO format
             if match:
+                docx_list.append(lists)
                 if x in lists:
                     new_list.append(match.group(3))
                     file_numeric = match.group(1)
