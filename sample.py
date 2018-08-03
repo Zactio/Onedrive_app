@@ -72,19 +72,18 @@ def upload_search():
         search_path = MSGRAPH.get("me/drive/root/search(q='%s')?select=name" % search_name, headers=request_headers()).data
         path_list = []
         new_list=[]
+        docx_list = []
         for x in search_path["value"]:
             if x["name"]:
                 path_list.append(x["name"])
         docx_list = []
-   
-        x = search_name
         for lists in path_list:
-            match = re.search('([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(docx)', lists)# if document is .docx and matches ISO format
+            match = re.search('([Superseded() ]+)?([f|F|R|r]\d*)([A-Za-z_]+?)(\d+)([A-Za-z_]+?)\.(\w+)', lists)# if document is .docx and matches ISO format
             if match:
                 docx_list.append(lists)
-                if x in lists:
-                    new_list.append(match.group(3))
-                    file_numeric = match.group(1)
+                if search_name in lists:
+                    new_list.append(int(match.group(4)))
+                    file_numeric = match.group(2)
             else:
                 continue
         docx_list = beautify_results(docx_list)
