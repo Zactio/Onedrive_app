@@ -5,13 +5,13 @@
 </head>
 <body>
 	<fieldset>
-		<h1>The latest version of the document that you are looking for is:</h1>		
+		<h1>The latest version of the document {{numeric}} is:</h1>		
 		<h1>{{version}}</h1>
 		<br><br>
 		<h1>The other documents with such names are:</h1>
-		<h2>
-		{% autoescape false %}{{path}}{% endautoescape %}
-		</h2>
+		<h2>{% autoescape false %}{{path}}{% endautoescape %}</h2>
+		<h2>Testing</h2>
+		testing
 	</fieldset>
 </body>
 </html>

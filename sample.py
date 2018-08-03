@@ -84,11 +84,12 @@ def upload_search():
             if match:
                 if x in lists:
                     new_list.append(match.group(3))
+                    file_numeric = match.group(1)
             else:
                 continue
         path_list = beautify_results
         Latest_version = max(new_list)
-        return render_template('search_latest_version.html', version=Latest_version, path = path_list)
+        return render_template('search_latest_version.html', version=Latest_version, path = path_list, numeric = file_numeric)
     return render_template('upload_search.html')
 
 def isForm(string):
